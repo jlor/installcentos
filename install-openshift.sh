@@ -47,7 +47,7 @@ if [ "$INTERACTIVE" = "true" ]; then
 	fi 
 
 	read -rp "AWS_ACCESS_KEY_ID: " choice;
-	if [["$choice" != "" ] ; then
+	if [ "$choice" != "" ] ; then
 		export AWS_ACCESS_KEY_ID="$choice";
 	fi
 
