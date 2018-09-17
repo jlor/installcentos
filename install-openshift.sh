@@ -96,7 +96,7 @@ fi
 
 # Install acme.sh
 curl -s https://get.acme.sh | sh
-/root/.acme.sh/acme.sh --issue -d *.${DOMAIN} -d ${DOMAIN} --dns dns_aws
+/root/.acme.sh/acme.sh --issue -d ${DOMAIN} -d *.${DOMAIN} --dns dns_aws
 
 # install the packages for Ansible
 yum -y --enablerepo=epel install ansible pyOpenSSL
