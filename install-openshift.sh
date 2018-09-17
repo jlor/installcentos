@@ -9,9 +9,11 @@ export DOMAIN=${DOMAIN:="$(curl -s ipinfo.io/ip).nip.io"}
 export USERNAME=${USERNAME:="$(whoami)"}
 export PASSWORD=${PASSWORD:=password}
 export VERSION=${VERSION:="3.10"}
-export SCRIPT_REPO=${SCRIPT_REPO:="https://raw.githubusercontent.com/gshipley/installcentos/master"}
+export SCRIPT_REPO=${SCRIPT_REPO:="https://raw.githubusercontent.com/jlor/installcentos/master"}
 export IP=${IP:="$(ip route get 8.8.8.8 | awk '{print $NF; exit}')"}
 export API_PORT=${API_PORT:="8443"}
+export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:=""}
+export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:=""}
 
 ## Make the script interactive to set the variables
 if [ "$INTERACTIVE" = "true" ]; then
@@ -44,6 +46,16 @@ if [ "$INTERACTIVE" = "true" ]; then
 		export API_PORT="$choice";
 	fi 
 
+	read -rp "AWS_ACCESS_KEY_ID: " choice;
+	if [["$choice" != "" ] ; then
+		export AWS_ACCESS_KEY_ID="$choice";
+	fi
+
+	read -rp "AWS_SECRET_ACCESS_KEY: " choice;
+	if [ "$choice" != "" ] ; then
+		export AWS_SECRET_ACCESS_KEY="$choice";
+	fi
+
 	echo
 
 fi
@@ -54,6 +66,8 @@ echo "* Your IP is $IP "
 echo "* Your username is $USERNAME "
 echo "* Your password is $PASSWORD "
 echo "* OpenShift version: $VERSION "
+echo "* AWS ACCESS KEY ID: $AWS_ACCESS_KEY_ID "
+echo "* AWS SECRET ACCESS KEY (last 4): ${AWS_SECRET_ACCESS_KEY: -4} "
 echo "******"
 
 # install updates
@@ -61,12 +75,12 @@ yum update -y
 
 # install the following base packages
 yum install -y  wget git zile nano net-tools docker-1.13.1\
-				bind-utils iptables-services \
-				bridge-utils bash-completion \
-				kexec-tools sos psacct openssl-devel \
-				httpd-tools NetworkManager \
-				python-cryptography python2-pip python-devel  python-passlib \
-				java-1.8.0-openjdk-headless "@Development Tools"
+	bind-utils iptables-services \
+	bridge-utils bash-completion \
+	kexec-tools sos psacct openssl-devel \
+	httpd-tools NetworkManager \
+	python-cryptography python2-pip python-devel  python-passlib \
+	java-1.8.0-openjdk-headless "@Development Tools"
 
 #install epel
 yum -y install epel-release
@@ -79,6 +93,10 @@ if [ $? -eq 1 ]; then
 	systemctl start NetworkManager
 	systemctl enable NetworkManager
 fi
+
+# Install acme.sh
+curl -s https://get.acme.sh | sh
+/root/.acme.sh/acme.sh --issue -d *.${DOMAIN} -d ${DOMAIN} --dns dns_aws
 
 # install the packages for Ansible
 yum -y --enablerepo=epel install ansible pyOpenSSL
@@ -164,7 +182,7 @@ if [ "$PVS" = "true" ]; then
 		mkdir -p /mnt/data/$DIRNAME 
 		chcon -Rt svirt_sandbox_file_t /mnt/data/$DIRNAME
 		chmod 777 /mnt/data/$DIRNAME
-		
+
 		sed "s/name: vol/name: vol$i/g" vol.yaml > oc_vol.yaml
 		sed -i "s/path: \/mnt\/data\/vol/path: \/mnt\/data\/vol$i/g" oc_vol.yaml
 		oc create -f oc_vol.yaml
